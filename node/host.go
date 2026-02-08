@@ -30,7 +30,7 @@ func (n *Node) Listen(ctx context.Context) error {
 				return nil
 			}
 			if err := n.handle(msg); err != nil {
-				return err
+				log.Println(err)
 			}
 		}
 	}
@@ -130,8 +130,10 @@ func (n *Node) handleCandidate(msg *signaling.Message) error {
 	if peer == nil {
 		return fmt.Errorf("session not found: %s", msg.From)
 	}
-	if err := peer.PeerConnection().AddICECandidate(candidate); err != nil {
-		return err
+	if pc := peer.PeerConnection(); pc != nil {
+		if err := pc.AddICECandidate(candidate); err != nil {
+			return err
+		}
 	}
 	return nil
 }
