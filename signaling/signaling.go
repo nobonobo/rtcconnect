@@ -51,7 +51,7 @@ func (s *Signaling) Subscribe(ctx context.Context) <-chan *Message {
 				return
 			default:
 			}
-			b, err := s.operator.Sub(s.id)
+			b, err := s.operator.Sub(ctx, s.id)
 			if err != nil {
 				log.Println(err)
 				continue
@@ -67,7 +67,7 @@ func (s *Signaling) Subscribe(ctx context.Context) <-chan *Message {
 	return ch
 }
 
-func (s *Signaling) Publish(from, kind string, payload json.RawMessage) error {
+func (s *Signaling) Publish(ctx context.Context, from, kind string, payload json.RawMessage) error {
 	b, err := json.Marshal(&Message{
 		From:    from,
 		To:      s.id,
@@ -77,5 +77,5 @@ func (s *Signaling) Publish(from, kind string, payload json.RawMessage) error {
 	if err != nil {
 		return err
 	}
-	return s.operator.Pub(s.id, b)
+	return s.operator.Pub(ctx, s.id, b)
 }
