@@ -29,26 +29,26 @@ func (n *Node) Listen(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-			if err := n.handle(msg); err != nil {
+			if err := n.handle(ctx, msg); err != nil {
 				log.Println(err)
 			}
 		}
 	}
 }
 
-func (n *Node) handle(msg *signaling.Message) error {
+func (n *Node) handle(ctx context.Context, msg *signaling.Message) error {
 	log.Println("handle:", msg.From, msg.To, msg.Type, string(msg.Payload))
 	switch msg.Type {
 	case "offer":
-		return n.handleOffer(msg)
+		return n.handleOffer(ctx, msg)
 	case "candidate":
-		return n.handleCandidate(msg)
+		return n.handleCandidate(ctx, msg)
 	default:
 		return fmt.Errorf("unknown message type: %s", msg.Type)
 	}
 }
 
-func (n *Node) handleOffer(msg *signaling.Message) error {
+func (n *Node) handleOffer(ctx context.Context, msg *signaling.Message) error {
 	offer := webrtc.SessionDescription{Type: webrtc.SDPTypeOffer}
 	if err := json.Unmarshal(msg.Payload, &offer.SDP); err != nil {
 		return err
@@ -89,7 +89,7 @@ func (n *Node) handleOffer(msg *signaling.Message) error {
 				log.Println(err)
 				return
 			}
-			if err := peer.Publish(n.id, "candidate", b); err != nil {
+			if err := peer.Publish(ctx, n.id, "candidate", b); err != nil {
 				log.Println(err)
 			}
 		}
@@ -112,7 +112,7 @@ func (n *Node) handleOffer(msg *signaling.Message) error {
 		return err
 	}
 	log.Println(msg.From, "answer:", string(b))
-	if err := peer.Publish(n.id, "answer", b); err != nil {
+	if err := peer.Publish(ctx, n.id, "answer", b); err != nil {
 		return err
 	}
 	if n.OnConnected != nil {
@@ -121,7 +121,7 @@ func (n *Node) handleOffer(msg *signaling.Message) error {
 	return nil
 }
 
-func (n *Node) handleCandidate(msg *signaling.Message) error {
+func (n *Node) handleCandidate(ctx context.Context, msg *signaling.Message) error {
 	var candidate webrtc.ICECandidateInit
 	if err := json.Unmarshal(msg.Payload, &candidate); err != nil {
 		return err
