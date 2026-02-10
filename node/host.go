@@ -18,8 +18,6 @@ func (n *Node) Listen(ctx context.Context) error {
 	conn := signaling.New(n.id)
 	defer conn.Close()
 	defer n.Close()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 	ch := conn.Subscribe(ctx)
 	for {
 		select {
