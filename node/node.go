@@ -113,7 +113,7 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 									log.Println(err)
 									continue
 								}
-								if err := sender.Publish(n.id, "candidate", b); err != nil {
+								if err := sender.Publish(ctx, n.id, "candidate", b); err != nil {
 									log.Println(err)
 								}
 							}
@@ -148,7 +148,7 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 		return err
 	}
 	log.Println("send offer", dst, "/", string(b))
-	if err := sender.Publish(n.id, "offer", b); err != nil {
+	if err := sender.Publish(ctx, n.id, "offer", b); err != nil {
 		return err
 	}
 	n.pc = pc
@@ -156,8 +156,8 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 	return <-done
 }
 
-func (n *Node) Publish(from, kind string, data []byte) error {
-	return n.conn.Publish(from, kind, data)
+func (n *Node) Publish(ctx context.Context, from, kind string, data []byte) error {
+	return n.conn.Publish(ctx, from, kind, data)
 }
 
 func (n *Node) Peer(id string) *Node {
