@@ -17,7 +17,6 @@ import (
 func (n *Node) Listen(ctx context.Context) error {
 	conn := signaling.New(n.id)
 	defer conn.Close()
-	defer n.Close()
 	ch := conn.Subscribe(ctx)
 	for {
 		select {
