@@ -13,6 +13,12 @@ import (
 )
 
 // for HostNode
+func NewHost(id string) *Node {
+	return &Node{
+		id:    id,
+		peers: map[string]*Node{},
+	}
+}
 
 func (n *Node) Listen(ctx context.Context) error {
 	conn := signaling.New(n.id)

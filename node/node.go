@@ -30,8 +30,7 @@ type Node struct {
 
 func New(id string) *Node {
 	return &Node{
-		id:    id,
-		peers: map[string]*Node{},
+		id: id,
 	}
 }
 
