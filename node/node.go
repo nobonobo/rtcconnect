@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/pion/webrtc/v4"
 
@@ -43,8 +42,6 @@ func NewPeer(id string, pc *webrtc.PeerConnection) *Node {
 }
 
 func (n *Node) Connect(ctx context.Context, dst string) error {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
 	done := make(chan error, 1)
 	pc, err := webrtc.NewPeerConnection(signaling.DefaultConfig)
 	if err != nil {
@@ -62,12 +59,13 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 		}()
 	})
 	incoming := make(chan webrtc.ICECandidateInit, 20)
-	defer close(incoming)
+	//defer close(incoming)
 	outgoing := make(chan webrtc.ICECandidateInit, 20)
 	sender := signaling.New(dst)
 	defer sender.Close()
 	pc.OnICECandidate(func(i *webrtc.ICECandidate) {
 		if i == nil {
+			log.Println("candidate completed")
 			close(outgoing)
 			return
 		}
@@ -95,6 +93,7 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 						log.Println(err)
 						continue
 					}
+					log.Println("answer:", answer)
 					if err := pc.SetRemoteDescription(answer); err != nil {
 						log.Println(err)
 						continue

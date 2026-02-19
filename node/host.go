@@ -40,7 +40,6 @@ func (n *Node) Listen(ctx context.Context) error {
 }
 
 func (n *Node) handle(ctx context.Context, msg *signaling.Message) error {
-	log.Println("handle:", msg.From, msg.To, msg.Type, string(msg.Payload))
 	switch msg.Type {
 	case "offer":
 		return n.handleOffer(ctx, msg)
@@ -61,18 +60,18 @@ func (n *Node) handleOffer(ctx context.Context, msg *signaling.Message) error {
 		return err
 	}
 	peer := NewPeer(msg.From, pc)
-	//ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(ctx)
 	pc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 		log.Println("connection state changed:", msg.From, pcs)
 		switch pcs {
 		case webrtc.PeerConnectionStateDisconnected, webrtc.PeerConnectionStateFailed:
 			peer.Close()
-			//cancel()
+			cancel()
 		case webrtc.PeerConnectionStateClosed:
 			n.mu.Lock()
 			delete(n.peers, msg.From)
 			n.mu.Unlock()
-			//cancel()
+			cancel()
 		}
 	})
 	pc.OnICEConnectionStateChange(func(is webrtc.ICEConnectionState) {
@@ -133,6 +132,7 @@ func (n *Node) handleCandidate(ctx context.Context, msg *signaling.Message) erro
 		return fmt.Errorf("session not found: %s", msg.From)
 	}
 	if pc := peer.PeerConnection(); pc != nil {
+		fmt.Println("add candidate:", candidate)
 		if err := pc.AddICECandidate(candidate); err != nil {
 			return err
 		}
