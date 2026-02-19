@@ -145,7 +145,7 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 		return err
 	}
 	log.Println("send offer", dst, "/", string(b))
-	sender.Publish(ctx, n.id, "offer", b)
+	go sender.Publish(ctx, n.id, "offer", b)
 	n.pc = pc
 	n.dataChannel = dc
 	return <-done
