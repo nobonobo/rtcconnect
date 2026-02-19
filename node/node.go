@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/pion/webrtc/v4"
 
@@ -47,14 +48,17 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 	if err != nil {
 		return err
 	}
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	pc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 		log.Println("connection state changed:", pcs)
 		go func() {
 			switch pcs {
 			case webrtc.PeerConnectionStateConnected:
 				done <- nil
+				cancel()
 			case webrtc.PeerConnectionStateFailed:
 				done <- fmt.Errorf("connection failed: %s", pcs)
+				cancel()
 			}
 		}()
 	})
