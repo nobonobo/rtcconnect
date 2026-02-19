@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"sync"
 
 	"github.com/pion/webrtc/v4"
 
@@ -63,7 +62,6 @@ func (n *Node) handleOffer(ctx context.Context, msg *signaling.Message) error {
 	}
 	peer := NewPeer(msg.From, pc)
 	ctx, cancel := context.WithCancel(ctx)
-	cancel = sync.OnceFunc(cancel)
 	pc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 		log.Println("connection state changed:", msg.From, pcs)
 		switch pcs {
@@ -97,9 +95,7 @@ func (n *Node) handleOffer(ctx context.Context, msg *signaling.Message) error {
 				log.Println(err)
 				return
 			}
-			if err := peer.Publish(ctx, n.id, "candidate", b); err != nil {
-				log.Println(err)
-			}
+			go peer.Publish(ctx, n.id, "candidate", b)
 		}
 	})
 	pc.OnDataChannel(func(dc *webrtc.DataChannel) {
@@ -120,9 +116,7 @@ func (n *Node) handleOffer(ctx context.Context, msg *signaling.Message) error {
 		return err
 	}
 	log.Println(msg.From, "answer:", string(b))
-	if err := peer.Publish(ctx, n.id, "answer", b); err != nil {
-		return err
-	}
+	go peer.Publish(ctx, n.id, "answer", b)
 	if n.OnConnected != nil {
 		n.OnConnected(peer)
 	}

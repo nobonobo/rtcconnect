@@ -24,20 +24,28 @@ type Message struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
+type entry struct {
+	ctx context.Context
+	b   []byte
+}
 type Signaling struct {
 	id       string
 	operator *operator.Operator
+	queue    chan entry
 }
 
 func New(id string) *Signaling {
 	s := &Signaling{
 		id:       id,
 		operator: operator.New(),
+		queue:    make(chan entry),
 	}
+	go s.do()
 	return s
 }
 
 func (s *Signaling) Close() error {
+	close(s.queue)
 	return nil
 }
 
@@ -67,15 +75,25 @@ func (s *Signaling) Subscribe(ctx context.Context) <-chan *Message {
 	return ch
 }
 
-func (s *Signaling) Publish(ctx context.Context, from, kind string, payload json.RawMessage) error {
-	b, err := json.Marshal(&Message{
+func (s *Signaling) do() {
+	for v := range s.queue {
+		select {
+		case <-v.ctx.Done():
+			continue
+		default:
+			if err := s.operator.Pub(v.ctx, s.id, v.b); err != nil {
+				log.Println(err)
+			}
+		}
+	}
+}
+
+func (s *Signaling) Publish(ctx context.Context, from, kind string, payload json.RawMessage) {
+	b, _ := json.Marshal(&Message{
 		From:    from,
 		To:      s.id,
 		Type:    kind,
 		Payload: payload,
 	})
-	if err != nil {
-		return err
-	}
-	return s.operator.Pub(ctx, s.id, b)
+	s.queue <- entry{ctx, b}
 }

@@ -112,9 +112,7 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 									log.Println(err)
 									continue
 								}
-								if err := sender.Publish(ctx, n.id, "candidate", b); err != nil {
-									log.Println(err)
-								}
+								go sender.Publish(ctx, n.id, "candidate", b)
 							}
 						}
 					}()
@@ -147,16 +145,15 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 		return err
 	}
 	log.Println("send offer", dst, "/", string(b))
-	if err := sender.Publish(ctx, n.id, "offer", b); err != nil {
-		return err
-	}
+	go sender.Publish(ctx, n.id, "offer", b)
 	n.pc = pc
 	n.dataChannel = dc
 	return <-done
 }
 
 func (n *Node) Publish(ctx context.Context, from, kind string, data []byte) error {
-	return n.conn.Publish(ctx, from, kind, data)
+	go n.conn.Publish(ctx, from, kind, data)
+	return nil
 }
 
 func (n *Node) Peer(id string) *Node {
