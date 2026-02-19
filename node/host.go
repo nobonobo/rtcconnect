@@ -116,7 +116,7 @@ func (n *Node) handleOffer(ctx context.Context, msg *signaling.Message) error {
 		return err
 	}
 	log.Println(msg.From, "answer:", string(b))
-	go peer.Publish(ctx, n.id, "answer", b)
+	peer.Publish(ctx, n.id, "answer", b)
 	if n.OnConnected != nil {
 		n.OnConnected(peer)
 	}

@@ -38,7 +38,7 @@ func New(id string) *Signaling {
 	s := &Signaling{
 		id:       id,
 		operator: operator.New(),
-		queue:    make(chan entry),
+		queue:    make(chan entry, 1),
 	}
 	go s.do()
 	return s

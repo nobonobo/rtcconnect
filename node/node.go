@@ -112,7 +112,7 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 									log.Println(err)
 									continue
 								}
-								go sender.Publish(ctx, n.id, "candidate", b)
+								sender.Publish(ctx, n.id, "candidate", b)
 							}
 						}
 					}()
@@ -145,14 +145,14 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 		return err
 	}
 	log.Println("send offer", dst, "/", string(b))
-	go sender.Publish(ctx, n.id, "offer", b)
+	sender.Publish(ctx, n.id, "offer", b)
 	n.pc = pc
 	n.dataChannel = dc
 	return <-done
 }
 
 func (n *Node) Publish(ctx context.Context, from, kind string, data []byte) error {
-	go n.conn.Publish(ctx, from, kind, data)
+	n.conn.Publish(ctx, from, kind, data)
 	return nil
 }
 
