@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"sync"
 
 	"github.com/nobonobo/operator"
 	"github.com/pion/webrtc/v4"
@@ -28,9 +29,11 @@ type entry struct {
 	ctx context.Context
 	b   []byte
 }
+
 type Signaling struct {
 	id       string
 	operator *operator.Operator
+	mu       sync.Mutex
 	queue    chan entry
 }
 
@@ -45,7 +48,10 @@ func New(id string) *Signaling {
 }
 
 func (s *Signaling) Close() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	close(s.queue)
+	s.queue = nil
 	return nil
 }
 
@@ -96,10 +102,13 @@ func (s *Signaling) Publish(ctx context.Context, from, kind string, payload json
 			Type:    kind,
 			Payload: payload,
 		})
+		s.mu.Lock()
+		ch := s.queue
+		s.mu.Unlock()
 		select {
 		case <-ctx.Done():
 			return
-		case s.queue <- entry{ctx, b}:
+		case ch <- entry{ctx, b}:
 		}
 	}()
 }
