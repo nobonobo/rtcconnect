@@ -35,6 +35,8 @@ type Signaling struct {
 	operator *operator.Operator
 	mu       sync.Mutex
 	queue    chan entry
+	wg       sync.WaitGroup
+	closed   bool
 }
 
 func New(id string) *Signaling {
@@ -49,9 +51,19 @@ func New(id string) *Signaling {
 
 func (s *Signaling) Close() error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	close(s.queue)
-	s.queue = nil
+	if s.closed {
+		s.mu.Unlock()
+		return nil
+	}
+	s.closed = true
+	s.mu.Unlock()
+	s.wg.Wait()
+	s.mu.Lock()
+	if s.queue != nil {
+		close(s.queue)
+		s.queue = nil
+	}
+	s.mu.Unlock()
 	return nil
 }
 
@@ -95,7 +107,15 @@ func (s *Signaling) do() {
 }
 
 func (s *Signaling) Publish(ctx context.Context, from, kind string, payload json.RawMessage) {
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return
+	}
+	s.wg.Add(1)
+	s.mu.Unlock()
 	go func() {
+		defer s.wg.Done()
 		b, _ := json.Marshal(&Message{
 			From:    from,
 			To:      s.id,
@@ -103,12 +123,12 @@ func (s *Signaling) Publish(ctx context.Context, from, kind string, payload json
 			Payload: payload,
 		})
 		s.mu.Lock()
-		ch := s.queue
-		s.mu.Unlock()
 		select {
 		case <-ctx.Done():
 			return
-		case ch <- entry{ctx, b}:
+		case s.queue <- entry{ctx, b}:
+		default:
 		}
+		s.mu.Unlock()
 	}()
 }
