@@ -71,9 +71,7 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 			close(outgoing)
 			return
 		}
-		go func() {
-			outgoing <- i.ToJSON()
-		}()
+		go func() { outgoing <- i.ToJSON() }()
 	})
 	go func() {
 		receiver := signaling.New(n.id)
@@ -152,7 +150,12 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 	sender.Publish(ctx, n.id, "offer", b)
 	n.pc = pc
 	n.dataChannel = dc
-	return <-done
+	select {
+	case v := <-done:
+		return v
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (n *Node) Publish(ctx context.Context, from, kind string, data []byte) error {
