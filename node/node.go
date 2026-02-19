@@ -104,11 +104,17 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 							select {
 							case <-ctx.Done():
 								return
-							case candidate := <-incoming:
+							case candidate, ok := <-incoming:
+								if !ok {
+									return
+								}
 								if err := pc.AddICECandidate(candidate); err != nil {
 									log.Println(err)
 								}
-							case candidate := <-outgoing:
+							case candidate, ok := <-outgoing:
+								if !ok {
+									return
+								}
 								b, err := json.Marshal(candidate)
 								if err != nil {
 									log.Println(err)
