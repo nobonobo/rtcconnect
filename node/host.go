@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/pion/webrtc/v4"
 
@@ -61,15 +62,19 @@ func (n *Node) handleOffer(ctx context.Context, msg *signaling.Message) error {
 		return err
 	}
 	peer := NewPeer(msg.From, pc)
+	ctx, cancel := context.WithCancel(ctx)
+	cancel = sync.OnceFunc(cancel)
 	pc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 		log.Println("connection state changed:", msg.From, pcs)
 		switch pcs {
 		case webrtc.PeerConnectionStateDisconnected, webrtc.PeerConnectionStateFailed:
 			peer.Close()
+			cancel()
 		case webrtc.PeerConnectionStateClosed:
 			n.mu.Lock()
 			delete(n.peers, msg.From)
 			n.mu.Unlock()
+			cancel()
 		}
 	})
 	pc.OnICEConnectionStateChange(func(is webrtc.ICEConnectionState) {
