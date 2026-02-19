@@ -89,16 +89,17 @@ func (s *Signaling) do() {
 }
 
 func (s *Signaling) Publish(ctx context.Context, from, kind string, payload json.RawMessage) {
-	b, _ := json.Marshal(&Message{
-		From:    from,
-		To:      s.id,
-		Type:    kind,
-		Payload: payload,
-	})
-	select {
-	case <-ctx.Done():
-		return
-	case s.queue <- entry{ctx, b}:
-	default:
-	}
+	go func() {
+		b, _ := json.Marshal(&Message{
+			From:    from,
+			To:      s.id,
+			Type:    kind,
+			Payload: payload,
+		})
+		select {
+		case <-ctx.Done():
+			return
+		case s.queue <- entry{ctx, b}:
+		}
+	}()
 }
