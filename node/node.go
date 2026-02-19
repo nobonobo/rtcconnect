@@ -52,12 +52,14 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 	}
 	pc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 		log.Println("connection state changed:", pcs)
-		switch pcs {
-		case webrtc.PeerConnectionStateConnected:
-			done <- nil
-		case webrtc.PeerConnectionStateFailed:
-			done <- fmt.Errorf("connection failed: %s", pcs)
-		}
+		go func() {
+			switch pcs {
+			case webrtc.PeerConnectionStateConnected:
+				done <- nil
+			case webrtc.PeerConnectionStateFailed:
+				done <- fmt.Errorf("connection failed: %s", pcs)
+			}
+		}()
 	})
 	incoming := make(chan webrtc.ICECandidateInit, 20)
 	defer close(incoming)
@@ -69,7 +71,9 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 			close(outgoing)
 			return
 		}
-		outgoing <- i.ToJSON()
+		go func() {
+			outgoing <- i.ToJSON()
+		}()
 	})
 	go func() {
 		receiver := signaling.New(n.id)
