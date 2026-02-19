@@ -95,5 +95,10 @@ func (s *Signaling) Publish(ctx context.Context, from, kind string, payload json
 		Type:    kind,
 		Payload: payload,
 	})
-	s.queue <- entry{ctx, b}
+	select {
+	case <-ctx.Done():
+		return
+	case s.queue <- entry{ctx, b}:
+	default:
+	}
 }
