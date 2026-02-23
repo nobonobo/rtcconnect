@@ -65,6 +65,9 @@ func (n *Node) handleOffer(ctx context.Context, msg *signaling.Message) error {
 		log.Println("connection state changed:", msg.From, pcs)
 		switch pcs {
 		case webrtc.PeerConnectionStateDisconnected, webrtc.PeerConnectionStateFailed:
+			if n.OnDisconnect != nil {
+				n.OnDisconnect(peer)
+			}
 			peer.Close()
 			cancel()
 		case webrtc.PeerConnectionStateClosed:

@@ -19,13 +19,14 @@ var (
 )
 
 type Node struct {
-	mu          sync.RWMutex
-	id          string
-	conn        *signaling.Signaling
-	pc          *webrtc.PeerConnection
-	dataChannel *webrtc.DataChannel
-	peers       map[string]*Node
-	OnConnected func(n *Node)
+	mu           sync.RWMutex
+	id           string
+	conn         *signaling.Signaling
+	pc           *webrtc.PeerConnection
+	dataChannel  *webrtc.DataChannel
+	peers        map[string]*Node
+	OnConnected  func(n *Node)
+	OnDisconnect func(n *Node)
 }
 
 func New(id string) *Node {
@@ -56,7 +57,10 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 			case webrtc.PeerConnectionStateConnected:
 				done <- nil
 				cancel()
-			case webrtc.PeerConnectionStateFailed:
+			case webrtc.PeerConnectionStateDisconnected, webrtc.PeerConnectionStateFailed:
+				if n.OnDisconnect != nil {
+					n.OnDisconnect(n)
+				}
 				done <- fmt.Errorf("connection failed: %s", pcs)
 				cancel()
 			}
