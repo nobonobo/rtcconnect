@@ -60,7 +60,7 @@ func (n *Node) handleOffer(ctx context.Context, msg *signaling.Message) error {
 		return err
 	}
 	peer := NewPeer(msg.From, pc)
-	ctx, cancel := context.WithCancel(ctx)
+	handlerCtx, cancel := context.WithCancel(ctx)
 	pc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 		log.Println("connection state changed:", msg.From, pcs)
 		switch pcs {
@@ -91,14 +91,12 @@ func (n *Node) handleOffer(ctx context.Context, msg *signaling.Message) error {
 		if i == nil {
 			return
 		}
-		if peer.DataChannel() == nil {
-			b, err := json.Marshal(i.ToJSON())
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			go peer.Publish(ctx, n.id, "candidate", b)
+		b, err := json.Marshal(i.ToJSON())
+		if err != nil {
+			log.Printf("%+v", err)
+			return
 		}
+		go peer.Publish(handlerCtx, n.id, "candidate", b)
 	})
 	pc.OnDataChannel(func(dc *webrtc.DataChannel) {
 		peer.SetDataChannel(dc)
@@ -118,7 +116,7 @@ func (n *Node) handleOffer(ctx context.Context, msg *signaling.Message) error {
 		return err
 	}
 	log.Println(msg.From, "answer:", string(b))
-	peer.Publish(ctx, n.id, "answer", b)
+	peer.Publish(handlerCtx, n.id, "answer", b)
 	if n.OnConnected != nil {
 		n.OnConnected(peer)
 	}
