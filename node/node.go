@@ -49,7 +49,7 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	pc.OnConnectionStateChange(func(pcs webrtc.PeerConnectionState) {
 		log.Println("connection state changed:", pcs)
 		go func() {
@@ -66,15 +66,15 @@ func (n *Node) Connect(ctx context.Context, dst string) error {
 			}
 		}()
 	})
-	incoming := make(chan webrtc.ICECandidateInit, 20)
-	//defer close(incoming)
-	outgoing := make(chan webrtc.ICECandidateInit, 20)
+	incoming := make(chan webrtc.ICECandidateInit, 50)
+	defer close(incoming)
+	outgoing := make(chan webrtc.ICECandidateInit, 50)
+	defer close(outgoing)
 	sender := signaling.New(dst)
 	defer sender.Close()
 	pc.OnICECandidate(func(i *webrtc.ICECandidate) {
 		if i == nil {
 			log.Println("candidate completed")
-			close(outgoing)
 			return
 		}
 		go func() { outgoing <- i.ToJSON() }()

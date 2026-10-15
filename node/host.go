@@ -79,6 +79,14 @@ func (n *Node) handleOffer(ctx context.Context, msg *signaling.Message) error {
 	})
 	pc.OnICEConnectionStateChange(func(is webrtc.ICEConnectionState) {
 		log.Println("ice connection state changed:", msg.From, is)
+		switch is {
+		case webrtc.ICEConnectionStateFailed, webrtc.ICEConnectionStateDisconnected:
+			if n.OnDisconnect != nil {
+				n.OnDisconnect(peer)
+			}
+			peer.Close()
+			cancel()
+		}
 	})
 	n.mu.Lock()
 	old := n.peers[msg.From]

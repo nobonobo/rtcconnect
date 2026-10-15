@@ -17,12 +17,21 @@ func main() {
 	flag.StringVar(&id, "id", id, "node id")
 	flag.StringVar(&host, "host", host, "host id")
 	flag.Parse()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	n := node.New(id)
 	defer n.Close()
 	if err := n.Connect(ctx, host); err != nil {
 		log.Fatal(err)
 	}
+	n.PeerConnection().OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
+		log.Println("connection state changed:", state)
+		switch state {
+		case webrtc.PeerConnectionStateConnected:
+		case webrtc.PeerConnectionStateDisconnected, webrtc.PeerConnectionStateFailed:
+			cancel()
+		}
+	})
 	n.DataChannel().OnOpen(func() {
 		log.Println("data channel opened:", host)
 		go func() {
@@ -32,7 +41,7 @@ func main() {
 				case <-ctx.Done():
 					return
 				case <-tick.C:
-					if err := n.DataChannel().Send([]byte("hello")); err != nil {
+					if err := n.DataChannel().Send([]byte(id + " : hello")); err != nil {
 						log.Println(err)
 					}
 				}
@@ -46,5 +55,5 @@ func main() {
 		log.Println("received:", string(msg.Data))
 	})
 	log.Println("node started:", id)
-	select {}
+	<-ctx.Done()
 }
